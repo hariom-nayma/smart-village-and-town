@@ -5,6 +5,7 @@ com/smartvillage/modules/marketplace/dto/CheckoutRequest.class
 com/smartvillage/modules/civic/repository/ComplaintFieldVisitRepository.class
 com/smartvillage/common/exception/ConflictException.class
 com/smartvillage/modules/transport/entity/TransportBooking.class
+com/smartvillage/modules/auth/dto/SendOtpRequest$SendOtpRequestBuilder.class
 com/smartvillage/modules/marketplace/dto/OrderItemDto.class
 com/smartvillage/modules/servicebooking/service/ServiceBookingService.class
 com/smartvillage/modules/servicebooking/dto/CreateServiceBookingRequest.class
@@ -36,6 +37,7 @@ com/smartvillage/modules/civic/entity/Initiative$InitiativeBuilder.class
 com/smartvillage/modules/auth/controller/AuthController.class
 com/smartvillage/modules/marketplace/entity/CustomerProfile$CustomerProfileBuilder.class
 com/smartvillage/modules/civic/dto/CreateDevelopmentProjectRequest.class
+com/smartvillage/modules/auth/dto/SendOtpResponse.class
 com/smartvillage/common/config/WebMvcConfig.class
 com/smartvillage/modules/civic/dto/UpdateDevelopmentProjectRequest.class
 com/smartvillage/modules/civic/service/CivicService.class
@@ -50,6 +52,7 @@ com/smartvillage/common/security/UserPrincipal$UserPrincipalBuilder.class
 com/smartvillage/modules/marketplace/entity/Category$CategoryBuilder.class
 com/smartvillage/common/audit/AuditLog.class
 com/smartvillage/common/util/CodeGenerator.class
+com/smartvillage/modules/auth/repository/MobileOtpVerificationRepository.class
 com/smartvillage/common/dto/PagedResponse.class
 com/smartvillage/modules/civic/controller/CivicController.class
 com/smartvillage/modules/delivery/repository/DeliveryAgentRepository.class
@@ -76,6 +79,7 @@ com/smartvillage/modules/payment/entity/PaymentSubmission$PaymentSubmissionBuild
 com/smartvillage/modules/transport/entity/TransportRate.class
 com/smartvillage/common/exception/ForbiddenException.class
 com/smartvillage/common/config/OpenApiConfig.class
+com/smartvillage/modules/auth/dto/SendOtpResponse$SendOtpResponseBuilder.class
 com/smartvillage/modules/marketplace/entity/OrderItem.class
 com/smartvillage/modules/marketplace/repository/VendorRepository.class
 com/smartvillage/common/dto/ApiResponse.class
@@ -87,6 +91,7 @@ com/smartvillage/modules/marketplace/dto/CheckoutResultDto.class
 com/smartvillage/modules/civic/repository/DepartmentReferralRepository.class
 com/smartvillage/common/security/SecurityUtils.class
 com/smartvillage/common/storage/LocalStorageService.class
+com/smartvillage/modules/auth/entity/MobileOtpVerification.class
 com/smartvillage/modules/civic/entity/Announcement$AnnouncementBuilder.class
 com/smartvillage/modules/civic/entity/DevelopmentProject.class
 com/smartvillage/modules/marketplace/dto/OrderDto.class
@@ -96,6 +101,7 @@ com/smartvillage/modules/tenant/dto/TenantDto.class
 com/smartvillage/modules/marketplace/entity/CategoryRequest$CategoryRequestBuilder.class
 com/smartvillage/common/dto/PagedResponse$PagedResponseBuilder.class
 com/smartvillage/modules/civic/entity/ComplaintFieldVisitItem.class
+com/smartvillage/modules/auth/dto/VerifyOtpLoginRequest.class
 com/smartvillage/common/constant/RoleConstants.class
 com/smartvillage/modules/payment/service/PaymentService.class
 com/smartvillage/common/exception/AppException.class
@@ -118,6 +124,7 @@ com/smartvillage/modules/auth/entity/User.class
 com/smartvillage/modules/auth/dto/UserDto.class
 com/smartvillage/modules/payment/repository/PaymentSubmissionRepository.class
 com/smartvillage/modules/civic/repository/ComplaintUpdateRepository.class
+com/smartvillage/modules/civic/dto/CreateStaffRequest.class
 com/smartvillage/modules/civic/entity/Complaint.class
 com/smartvillage/modules/civic/entity/ComplaintFieldVisitItem$ComplaintFieldVisitItemBuilder.class
 com/smartvillage/modules/tenant/entity/Tenant$TenantBuilder.class
@@ -163,9 +170,12 @@ com/smartvillage/modules/civic/entity/ComplaintUpdate$ComplaintUpdateBuilder.cla
 com/smartvillage/modules/marketplace/dto/OrderDto$OrderDtoBuilder.class
 com/smartvillage/modules/delivery/controller/DeliveryController.class
 com/smartvillage/modules/transport/entity/TransportRate$TransportRateBuilder.class
+com/smartvillage/modules/auth/dto/VerifyOtpLoginRequest$VerifyOtpLoginRequestBuilder.class
 com/smartvillage/modules/delivery/entity/DeliveryReview.class
 com/smartvillage/modules/delivery/entity/DeliveryReview$DeliveryReviewBuilder.class
 com/smartvillage/modules/civic/entity/Volunteer.class
+com/smartvillage/modules/auth/dto/SendOtpRequest.class
+com/smartvillage/modules/auth/entity/MobileOtpVerification$MobileOtpVerificationBuilder.class
 com/smartvillage/modules/delivery/entity/DeliveryAgent$DeliveryAgentBuilder.class
 com/smartvillage/modules/servicebooking/entity/ServiceBooking$ServiceBookingBuilder.class
 com/smartvillage/modules/servicebooking/repository/ServicePaymentSubmissionRepository.class

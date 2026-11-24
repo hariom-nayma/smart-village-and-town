@@ -14,6 +14,9 @@ public interface ComplaintFieldVisitRepository extends JpaRepository<ComplaintFi
     List<ComplaintFieldVisit> findByComplaintIdOrderByScheduledAtDesc(UUID complaintId);
     Page<ComplaintFieldVisit> findByTenantIdOrderByScheduledAtDesc(UUID tenantId, Pageable pageable);
     List<ComplaintFieldVisit> findByTenantIdOrderByScheduledAtDesc(UUID tenantId);
+    List<ComplaintFieldVisit> findByTenantIdInOrderByScheduledAtDesc(java.util.Collection<UUID> tenantIds);
     long countByTenantId(UUID tenantId);
+    long countByTenantIdIn(java.util.Collection<UUID> tenantIds);
     long countByTenantIdAndCompletedAtIsNotNull(UUID tenantId);
+    long countByTenantIdInAndCompletedAtIsNotNull(java.util.Collection<UUID> tenantIds);
 }

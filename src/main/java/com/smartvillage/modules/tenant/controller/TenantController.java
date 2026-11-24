@@ -31,6 +31,12 @@ public class TenantController {
         return ApiResponse.ok(tenantService.getTenantBySlug(slug));
     }
 
+    @GetMapping("/public/tenants/constituency/{constituency}")
+    @Operation(summary = "Get all towns within an assembly constituency")
+    public ApiResponse<List<TenantDto>> getTenantsByConstituency(@PathVariable String constituency) {
+        return ApiResponse.ok(tenantService.getTenantsByConstituency(constituency));
+    }
+
     @PostMapping("/admin/tenants")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Create a new village/town tenant (Super Admin only)")

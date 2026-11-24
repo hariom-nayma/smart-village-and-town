@@ -37,6 +37,9 @@ public class User extends BaseEntity {
     @Column(name = "tenant_id")
     private UUID tenantId;
 
+    @Column(name = "constituency", length = 150)
+    private String constituency;
+
     @Column(name = "vendor_id")
     private UUID vendorId;
 

@@ -12,7 +12,10 @@ import java.util.UUID;
 @Repository
 public interface DevelopmentProjectRepository extends JpaRepository<DevelopmentProject, UUID> {
     List<DevelopmentProject> findByTenantIdOrderByCreatedAtDesc(UUID tenantId);
+    List<DevelopmentProject> findByTenantIdInOrderByCreatedAtDesc(java.util.Collection<UUID> tenantIds);
     Page<DevelopmentProject> findByTenantIdOrderByCreatedAtDesc(UUID tenantId, Pageable pageable);
     long countByTenantIdAndStatus(UUID tenantId, String status);
+    long countByTenantIdInAndStatus(java.util.Collection<UUID> tenantIds, String status);
     long countByTenantId(UUID tenantId);
+    long countByTenantIdIn(java.util.Collection<UUID> tenantIds);
 }

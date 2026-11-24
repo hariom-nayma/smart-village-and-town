@@ -27,6 +27,7 @@ public class UserPrincipal implements UserDetails {
     private final String phone;
     private final String role;
     private final UUID tenantId;
+    private final String constituency;
     private final UUID vendorId;
     private final boolean active;
     private final Collection<? extends GrantedAuthority> authorities;
@@ -44,6 +45,7 @@ public class UserPrincipal implements UserDetails {
                 .phone(user.getPhone())
                 .role(user.getRole().toUpperCase())
                 .tenantId(user.getTenantId())
+                .constituency(user.getConstituency())
                 .vendorId(user.getVendorId())
                 .active(user.isActive())
                 .authorities(authorities)

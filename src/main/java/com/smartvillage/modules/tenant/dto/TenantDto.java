@@ -20,5 +20,7 @@ public class TenantDto {
     private String pincode;
     private String contactPhone;
     private String contactEmail;
+    private String constituency;
+    private String bodyType;
     private boolean active;
 }

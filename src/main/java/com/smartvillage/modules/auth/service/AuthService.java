@@ -79,6 +79,7 @@ public class AuthService {
                 .fullName(principal.getFullName())
                 .role(principal.getRole())
                 .tenantId(principal.getTenantId())
+                .constituency(principal.getConstituency())
                 .vendorId(principal.getVendorId())
                 .build();
     }
@@ -112,6 +113,7 @@ public class AuthService {
                 .fullName(user.getFullName())
                 .role(user.getRole())
                 .tenantId(user.getTenantId())
+                .constituency(user.getConstituency())
                 .build();
     }
 
@@ -247,6 +249,14 @@ public class AuthService {
                     : "Citizen " + mobile.substring(6);
             String customerEmail = "customer-" + mobile + "@marketplace.invalid";
 
+            String autoConstituency = null;
+            if (finalTenantId != null) {
+                try {
+                    Tenant t = tenantService.getTenantEntityById(finalTenantId);
+                    autoConstituency = t.getConstituency();
+                } catch (Exception ignored) {}
+            }
+
             User newUser = User.builder()
                     .email(customerEmail)
                     .password(passwordEncoder.encode(UUID.randomUUID().toString()))
@@ -254,6 +264,7 @@ public class AuthService {
                     .phone(mobile)
                     .role(RoleConstants.CUSTOMER)
                     .tenantId(finalTenantId)
+                    .constituency(autoConstituency)
                     .active(true)
                     .build();
             newUser = userRepository.save(newUser);
@@ -296,6 +307,7 @@ public class AuthService {
                 .fullName(user.getFullName())
                 .role(user.getRole())
                 .tenantId(user.getTenantId())
+                .constituency(user.getConstituency())
                 .vendorId(user.getVendorId())
                 .build();
     }
@@ -353,6 +365,14 @@ public class AuthService {
             tenantId = defaultTenant.getId();
         }
 
+        String constituency = null;
+        if (tenantId != null) {
+            try {
+                Tenant t = tenantService.getTenantEntityById(tenantId);
+                constituency = t.getConstituency();
+            } catch (Exception ignored) {}
+        }
+
         User user = User.builder()
                 .email(email)
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -360,6 +380,7 @@ public class AuthService {
                 .phone(phone)
                 .role(requestedRole)
                 .tenantId(tenantId)
+                .constituency(constituency)
                 .active(true)
                 .build();
 
@@ -388,6 +409,7 @@ public class AuthService {
                 .fullName(user.getFullName())
                 .role(user.getRole())
                 .tenantId(user.getTenantId())
+                .constituency(user.getConstituency())
                 .build();
     }
 
@@ -408,6 +430,7 @@ public class AuthService {
     public Map<String, Object> getAdminUsers(String tenantSlug) {
         String slug = tenantSlug != null ? tenantSlug : TenantContext.getTenantSlug();
         Tenant tenant = tenantService.getTenantEntityBySlug(slug != null ? slug : "gursarai");
+        SecurityUtils.validateTenantAccess(tenant.getId());
 
         UserPrincipal currentUser = SecurityUtils.getCurrentUser();
         boolean superOnly = currentUser != null && RoleConstants.SUPER_ADMIN.equals(currentUser.getRole());
@@ -551,6 +574,7 @@ public class AuthService {
                 .phone(user.getPhone())
                 .role(user.getRole())
                 .tenantId(user.getTenantId())
+                .constituency(user.getConstituency())
                 .vendorId(user.getVendorId())
                 .active(user.isActive())
                 .createdAt(user.getCreatedAt())

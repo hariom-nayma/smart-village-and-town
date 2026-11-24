@@ -36,6 +36,12 @@ public class Tenant extends BaseEntity {
     @Column(name = "contact_email", length = 150)
     private String contactEmail;
 
+    @Column(length = 150)
+    private String constituency;
+
+    @Column(name = "body_type", length = 50)
+    private String bodyType;
+
     @Builder.Default
     @Column(nullable = false)
     private boolean active = true;

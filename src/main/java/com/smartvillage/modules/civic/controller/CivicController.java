@@ -256,12 +256,7 @@ public class CivicController {
     public ApiResponse<PagedResponse<Complaint>> listComplaints(@RequestParam(value = "tenant", required = false) String tenant,
                                                                 @RequestParam(value = "tenantId", required = false) UUID tenantId,
                                                                 @PageableDefault(size = 20) Pageable pageable) {
-        UUID effectiveTenantId = tenantId;
-        if (effectiveTenantId == null) {
-            String slug = tenant != null ? tenant : TenantContext.getTenantSlug();
-            effectiveTenantId = tenantService.getTenantEntityBySlug(slug != null ? slug : "gursarai").getId();
-        }
-        return ApiResponse.ok(PagedResponse.from(civicService.getComplaintsForAdmin(effectiveTenantId, pageable)));
+        return ApiResponse.ok(PagedResponse.from(civicService.getComplaintsForAdmin(tenant, tenantId, pageable)));
     }
 
     @GetMapping("/admin/complaints/{id}")

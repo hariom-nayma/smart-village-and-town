@@ -12,5 +12,6 @@ import java.util.UUID;
 public interface TenantRepository extends JpaRepository<Tenant, UUID> {
     Optional<Tenant> findBySlug(String slug);
     List<Tenant> findByActiveTrueOrderByNameAsc();
+    List<Tenant> findByConstituencyIgnoreCaseAndActiveTrue(String constituency);
     boolean existsBySlug(String slug);
 }

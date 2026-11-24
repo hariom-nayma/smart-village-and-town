@@ -45,8 +45,12 @@ public final class SecurityUtils {
         if (RoleConstants.SUPER_ADMIN.equalsIgnoreCase(user.getRole())) {
             return;
         }
+        if (RoleConstants.MLA.equalsIgnoreCase(user.getRole())) {
+            // MLA has overarching multi-town authority across their assembly constituency
+            return;
+        }
         if (tenantId == null || !tenantId.equals(user.getTenantId())) {
-            throw new ForbiddenException("You do not have access to this tenant's data.");
+            throw new ForbiddenException("You do not have access to this town's data. You are restricted to your assigned local body.");
         }
     }
 }

@@ -67,6 +67,19 @@ public class TenantService {
         return mapToDto(tenantRepository.save(tenant));
     }
 
+    @Transactional(readOnly = true)
+    public List<TenantDto> getTenantsByConstituency(String constituency) {
+        return tenantRepository.findByConstituencyIgnoreCaseAndActiveTrue(constituency.trim())
+                .stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Tenant> getTenantEntitiesByConstituency(String constituency) {
+        return tenantRepository.findByConstituencyIgnoreCaseAndActiveTrue(constituency.trim());
+    }
+
     public TenantDto mapToDto(Tenant tenant) {
         return TenantDto.builder()
                 .id(tenant.getId())
@@ -77,6 +90,8 @@ public class TenantService {
                 .pincode(tenant.getPincode())
                 .contactPhone(tenant.getContactPhone())
                 .contactEmail(tenant.getContactEmail())
+                .constituency(tenant.getConstituency())
+                .bodyType(tenant.getBodyType())
                 .active(tenant.isActive())
                 .build();
     }

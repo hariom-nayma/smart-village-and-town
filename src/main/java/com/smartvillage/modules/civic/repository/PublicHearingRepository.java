@@ -11,6 +11,9 @@ import java.util.UUID;
 @Repository
 public interface PublicHearingRepository extends JpaRepository<PublicHearing, UUID> {
     List<PublicHearing> findByTenantIdOrderByHearingDateDesc(UUID tenantId);
+    List<PublicHearing> findByTenantIdInOrderByHearingDateDesc(java.util.Collection<UUID> tenantIds);
     List<PublicHearing> findByTenantIdAndHearingDateGreaterThanEqualOrderByHearingDateAsc(UUID tenantId, LocalDate date);
+    List<PublicHearing> findByTenantIdInAndHearingDateGreaterThanEqualOrderByHearingDateAsc(java.util.Collection<UUID> tenantIds, LocalDate date);
     long countByTenantId(UUID tenantId);
+    long countByTenantIdIn(java.util.Collection<UUID> tenantIds);
 }

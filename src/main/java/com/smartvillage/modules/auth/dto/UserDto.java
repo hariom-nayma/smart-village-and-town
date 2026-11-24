@@ -19,6 +19,7 @@ public class UserDto {
     private String phone;
     private String role;
     private UUID tenantId;
+    private String constituency;
     private UUID vendorId;
     private boolean active;
     private Instant createdAt;

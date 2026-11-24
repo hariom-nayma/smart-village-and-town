@@ -156,22 +156,47 @@ public class CivicService {
         return metrics;
     }
 
+    public List<Tenant> resolveTargetTenants(String tenantSlug) {
+        Optional<UserPrincipal> userOpt = SecurityUtils.getCurrentUserOpt();
+        if ("all".equalsIgnoreCase(tenantSlug) || "constituency".equalsIgnoreCase(tenantSlug)) {
+            if (userOpt.isPresent()) {
+                UserPrincipal user = userOpt.get();
+                if (!RoleConstants.SUPER_ADMIN.equalsIgnoreCase(user.getRole()) && !RoleConstants.MLA.equalsIgnoreCase(user.getRole())) {
+                    throw new ForbiddenException("Only an MLA or Super Administrator has overarching constituency rollup access.");
+                }
+            }
+            List<Tenant> list = tenantService.getTenantEntitiesByConstituency("Garautha");
+            if (!list.isEmpty()) {
+                return list;
+            }
+        }
+        String slug = (tenantSlug != null && !tenantSlug.isBlank()) ? tenantSlug : TenantContext.getTenantSlug();
+        Tenant tenant = tenantService.getTenantEntityBySlug(slug != null ? slug : "gursarai");
+        if (userOpt.isPresent()) {
+            SecurityUtils.validateTenantAccess(tenant.getId());
+        }
+        return List.of(tenant);
+    }
+
     // ==========================================
     // 1. CONSTITUENCY COMMAND CENTER (Dashboard)
     // ==========================================
     @Transactional(readOnly = true)
     public Map<String, Object> getConstituencyDashboard(String tenantSlug) {
-        Tenant tenant = tenantService.getTenantEntityBySlug(tenantSlug != null ? tenantSlug : TenantContext.getTenantSlug());
-        UUID tenantId = tenant.getId();
+        List<Tenant> targets = resolveTargetTenants(tenantSlug);
+        List<UUID> tenantIds = targets.stream().map(Tenant::getId).toList();
+        boolean isAll = targets.size() > 1;
 
-        long total = complaintRepository.countByTenantId(tenantId);
-        long submitted = complaintRepository.countByTenantIdAndStatus(tenantId, "submitted");
-        long underReview = complaintRepository.countByTenantIdAndStatus(tenantId, "under_review");
-        long inProgress = complaintRepository.countByTenantIdAndStatus(tenantId, "in_progress");
-        long resolved = complaintRepository.countByTenantIdAndStatus(tenantId, "resolved");
-        long rejected = complaintRepository.countByTenantIdAndStatus(tenantId, "rejected");
+        List<Complaint> allComplaints = isAll
+                ? complaintRepository.findByTenantIdInOrderByCreatedAtDesc(tenantIds)
+                : complaintRepository.findByTenantIdOrderByCreatedAtDesc(tenantIds.get(0));
 
-        List<Complaint> allComplaints = complaintRepository.findByTenantIdOrderByCreatedAtDesc(tenantId);
+        long total = allComplaints.size();
+        long submitted = allComplaints.stream().filter(c -> "submitted".equalsIgnoreCase(c.getStatus())).count();
+        long underReview = allComplaints.stream().filter(c -> "under_review".equalsIgnoreCase(c.getStatus())).count();
+        long inProgress = allComplaints.stream().filter(c -> "in_progress".equalsIgnoreCase(c.getStatus())).count();
+        long resolved = allComplaints.stream().filter(c -> "resolved".equalsIgnoreCase(c.getStatus())).count();
+        long rejected = allComplaints.stream().filter(c -> "rejected".equalsIgnoreCase(c.getStatus())).count();
 
         long urgentCount = allComplaints.stream()
                 .filter(c -> "urgent".equalsIgnoreCase(c.getPriority()) && !List.of("resolved", "rejected").contains(c.getStatus().toLowerCase()))
@@ -187,13 +212,13 @@ public class CivicService {
                         && (c.isOverdue() || (c.getDueAt() != null && c.getDueAt().isBefore(now)) || (c.getFollowUpAt() != null && c.getFollowUpAt().isBefore(now))))
                 .count();
 
-        long totalVisits = fieldVisitRepository.countByTenantId(tenantId);
-        long visitsCompleted = fieldVisitRepository.countByTenantIdAndCompletedAtIsNotNull(tenantId);
+        long totalVisits = isAll ? fieldVisitRepository.countByTenantIdIn(tenantIds) : fieldVisitRepository.countByTenantId(tenantIds.get(0));
+        long visitsCompleted = isAll ? fieldVisitRepository.countByTenantIdInAndCompletedAtIsNotNull(tenantIds) : fieldVisitRepository.countByTenantIdAndCompletedAtIsNotNull(tenantIds.get(0));
         long visitsScheduled = Math.max(0, totalVisits - visitsCompleted);
 
-        long departmentReferrals = departmentReferralRepository.countByTenantId(tenantId);
-        long deptWorkInitiated = departmentReferralRepository.countByTenantIdAndStatus(tenantId, "work_initiated");
-        long deptVerifiedResolution = departmentReferralRepository.countByTenantIdAndStatus(tenantId, "verified_resolution");
+        long departmentReferrals = isAll ? departmentReferralRepository.countByTenantIdIn(tenantIds) : departmentReferralRepository.countByTenantId(tenantIds.get(0));
+        long deptWorkInitiated = isAll ? departmentReferralRepository.countByTenantIdInAndStatus(tenantIds, "work_initiated") : departmentReferralRepository.countByTenantIdAndStatus(tenantIds.get(0), "work_initiated");
+        long deptVerifiedResolution = isAll ? departmentReferralRepository.countByTenantIdInAndStatus(tenantIds, "verified_resolution") : departmentReferralRepository.countByTenantIdAndStatus(tenantIds.get(0), "verified_resolution");
 
         // Village pending breakdown
         Map<String, Long> villagePending = new HashMap<>();
@@ -218,7 +243,7 @@ public class CivicService {
         }
         if (!topVillagesPending.isEmpty()) {
             Map<String, Object> top = topVillagesPending.get(0);
-            focusOfToday.add("📍 Village " + top.get("village") + " has the highest backlog (" + top.get("pendingCount") + " issues) — prioritize for next field inspection.");
+            focusOfToday.add("📍 Village/Sector " + top.get("village") + " has the highest backlog (" + top.get("pendingCount") + " issues) — prioritize for next field inspection.");
         }
         if (visitsScheduled > 0) {
             focusOfToday.add("🚙 " + visitsScheduled + " field inspection visit(s) currently scheduled on calendar.");
@@ -227,9 +252,20 @@ public class CivicService {
             focusOfToday.add("✅ All citizen grievances are currently triaged and within target response SLAs.");
         }
 
+        // Available towns in constituency for town switcher
+        List<Tenant> allConstituencyTowns = tenantService.getTenantEntitiesByConstituency("Garautha");
+
         Map<String, Object> dashboard = new LinkedHashMap<>();
-        dashboard.put("tenant", tenant.getSlug());
-        dashboard.put("tenantName", tenant.getName());
+        dashboard.put("tenant", isAll ? "all" : targets.get(0).getSlug());
+        dashboard.put("tenantName", isAll ? "All Constituency Towns (Garautha Rollup)" : targets.get(0).getName());
+        dashboard.put("isConsolidatedRollup", isAll);
+        dashboard.put("constituency", "Garautha");
+        dashboard.put("availableTowns", allConstituencyTowns.stream().map(t -> Map.of(
+                "id", t.getId(),
+                "name", t.getName(),
+                "slug", t.getSlug(),
+                "bodyType", t.getBodyType() != null ? t.getBodyType() : "TOWN"
+        )).toList());
         dashboard.put("totalIssues", total);
         dashboard.put("newAwaitingReview", submitted);
         dashboard.put("underReview", underReview);
@@ -256,9 +292,15 @@ public class CivicService {
     // ==========================================
     @Transactional(readOnly = true)
     public Map<String, Object> getVillageProblemHeatmap(String tenantSlug) {
-        Tenant tenant = tenantService.getTenantEntityBySlug(tenantSlug != null ? tenantSlug : TenantContext.getTenantSlug());
-        UUID tenantId = tenant.getId();
-        List<Complaint> complaints = complaintRepository.findByTenantIdOrderByCreatedAtDesc(tenantId);
+        List<Tenant> targets = resolveTargetTenants(tenantSlug);
+        List<UUID> tenantIds = targets.stream().map(Tenant::getId).toList();
+        boolean isAll = targets.size() > 1;
+
+        List<Complaint> complaints = isAll
+                ? complaintRepository.findByTenantIdInOrderByCreatedAtDesc(tenantIds)
+                : complaintRepository.findByTenantIdOrderByCreatedAtDesc(tenantIds.get(0));
+
+        Map<UUID, String> townNameMap = targets.stream().collect(java.util.stream.Collectors.toMap(Tenant::getId, Tenant::getName));
 
         Map<String, Map<String, Integer>> matrix = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
         Map<String, Integer> villageTotal = new HashMap<>();
@@ -267,7 +309,8 @@ public class CivicService {
         Set<String> categories = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 
         for (Complaint c : complaints) {
-            String village = (c.getVillage() != null && !c.getVillage().isBlank()) ? c.getVillage().trim() : "Main Town";
+            String v = (c.getVillage() != null && !c.getVillage().isBlank()) ? c.getVillage().trim() : "Main Sector";
+            String village = isAll ? (townNameMap.getOrDefault(c.getTenantId(), "Town") + " — " + v) : v;
             String category = (c.getCategory() != null && !c.getCategory().isBlank()) ? c.getCategory().trim() : "General";
 
             categories.add(category);
@@ -313,7 +356,7 @@ public class CivicService {
         rows.sort((a, b) -> Integer.compare((Integer) b.get("pending"), (Integer) a.get("pending")));
 
         Map<String, Object> response = new LinkedHashMap<>();
-        response.put("tenant", tenant.getSlug());
+        response.put("tenant", isAll ? "all" : targets.get(0).getSlug());
         response.put("categories", categories);
         response.put("heatmap", rows);
         response.put("villageCategoryMatrix", rows);
@@ -327,16 +370,20 @@ public class CivicService {
     // ==========================================
     @Transactional(readOnly = true)
     public Map<String, Object> getConstituencyIntelligence(String tenantSlug) {
-        Tenant tenant = tenantService.getTenantEntityBySlug(tenantSlug != null ? tenantSlug : TenantContext.getTenantSlug());
-        UUID tenantId = tenant.getId();
-        List<Complaint> complaints = complaintRepository.findByTenantIdOrderByCreatedAtDesc(tenantId);
+        List<Tenant> targets = resolveTargetTenants(tenantSlug);
+        List<UUID> tenantIds = targets.stream().map(Tenant::getId).toList();
+        boolean isAll = targets.size() > 1;
+
+        List<Complaint> complaints = isAll
+                ? complaintRepository.findByTenantIdInOrderByCreatedAtDesc(tenantIds)
+                : complaintRepository.findByTenantIdOrderByCreatedAtDesc(tenantIds.get(0));
         Instant now = Instant.now();
 
         // 1. Where are the most reported problems?
         Map<String, Long> villageCounts = new HashMap<>();
         Map<String, Long> categoryCounts = new HashMap<>();
         for (Complaint c : complaints) {
-            String v = c.getVillage() != null ? c.getVillage() : "Main Town";
+            String v = c.getVillage() != null ? c.getVillage() : "Main Sector";
             String cat = c.getCategory() != null ? c.getCategory() : "General";
             villageCounts.put(v, villageCounts.getOrDefault(v, 0L) + 1);
             categoryCounts.put(cat, categoryCounts.getOrDefault(cat, 0L) + 1);
@@ -359,7 +406,9 @@ public class CivicService {
         Object clusters = heatmapData.get("clusters");
 
         // 4. Which departments have pending follow-ups?
-        List<DepartmentReferral> referrals = departmentReferralRepository.findByTenantIdOrderByCreatedAtDesc(tenantId);
+        List<DepartmentReferral> referrals = isAll
+                ? departmentReferralRepository.findByTenantIdInOrderByCreatedAtDesc(tenantIds)
+                : departmentReferralRepository.findByTenantIdOrderByCreatedAtDesc(tenantIds.get(0));
         List<DepartmentReferral> pendingDeptFollowups = referrals.stream()
                 .filter(r -> List.of("referred", "work_initiated").contains(r.getStatus().toLowerCase()))
                 .toList();
@@ -368,6 +417,9 @@ public class CivicService {
         long total = complaints.size();
         long resolved = complaints.stream().filter(c -> "resolved".equalsIgnoreCase(c.getStatus())).count();
         double resolutionRate = total > 0 ? Math.round(((double) resolved / total) * 1000.0) / 10.0 : 0.0;
+        long projectsCompleted = isAll
+                ? developmentProjectRepository.countByTenantIdInAndStatus(tenantIds, "completed")
+                : developmentProjectRepository.countByTenantIdAndStatus(tenantIds.get(0), "completed");
 
         return Map.of(
                 "q1_geographicAnalysis", Map.of("topVillages", villageCounts, "topCategories", categoryCounts),
@@ -377,13 +429,13 @@ public class CivicService {
                         "between7And14Days", between7And14,
                         "under7Days", under7Days
                 ),
-                "q3_locationVisitRecommendations", clusters,
+                "q3_locationVisitRecommendations", clusters != null ? clusters : List.of(),
                 "q4_departmentReferralTracker", Map.of("pendingCount", pendingDeptFollowups.size(), "referrals", pendingDeptFollowups),
                 "q5_measurableProgress", Map.of(
                         "totalGrievances", total,
                         "resolvedCount", resolved,
                         "resolutionRatePercent", resolutionRate,
-                        "projectsCompleted", developmentProjectRepository.countByTenantIdAndStatus(tenantId, "completed")
+                        "projectsCompleted", projectsCompleted
                 )
         );
     }
@@ -495,8 +547,11 @@ public class CivicService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getFieldVisits(String tenantSlug) {
-        Tenant tenant = tenantService.getTenantEntityBySlug(tenantSlug != null ? tenantSlug : TenantContext.getTenantSlug());
-        List<ComplaintFieldVisit> visits = fieldVisitRepository.findByTenantIdOrderByScheduledAtDesc(tenant.getId());
+        List<Tenant> targets = resolveTargetTenants(tenantSlug);
+        List<UUID> tenantIds = targets.stream().map(Tenant::getId).toList();
+        List<ComplaintFieldVisit> visits = targets.size() > 1
+                ? fieldVisitRepository.findByTenantIdInOrderByScheduledAtDesc(tenantIds)
+                : fieldVisitRepository.findByTenantIdOrderByScheduledAtDesc(tenantIds.get(0));
 
         List<Map<String, Object>> result = new ArrayList<>();
         for (ComplaintFieldVisit v : visits) {
@@ -603,8 +658,12 @@ public class CivicService {
 
     @Transactional(readOnly = true)
     public List<DepartmentReferral> getDepartmentReferrals(String tenantSlug) {
-        Tenant tenant = tenantService.getTenantEntityBySlug(tenantSlug != null ? tenantSlug : TenantContext.getTenantSlug());
-        return departmentReferralRepository.findByTenantIdOrderByCreatedAtDesc(tenant.getId());
+        List<Tenant> targets = resolveTargetTenants(tenantSlug);
+        List<UUID> tenantIds = targets.stream().map(Tenant::getId).toList();
+        if (targets.size() > 1) {
+            return departmentReferralRepository.findByTenantIdInOrderByCreatedAtDesc(tenantIds);
+        }
+        return departmentReferralRepository.findByTenantIdOrderByCreatedAtDesc(tenantIds.get(0));
     }
 
     // ==========================================
@@ -612,8 +671,12 @@ public class CivicService {
     // ==========================================
     @Transactional(readOnly = true)
     public List<DevelopmentProject> getDevelopmentProjects(String tenantSlug) {
-        Tenant tenant = tenantService.getTenantEntityBySlug(tenantSlug != null ? tenantSlug : TenantContext.getTenantSlug());
-        return developmentProjectRepository.findByTenantIdOrderByCreatedAtDesc(tenant.getId());
+        List<Tenant> targets = resolveTargetTenants(tenantSlug);
+        List<UUID> tenantIds = targets.stream().map(Tenant::getId).toList();
+        if (targets.size() > 1) {
+            return developmentProjectRepository.findByTenantIdInOrderByCreatedAtDesc(tenantIds);
+        }
+        return developmentProjectRepository.findByTenantIdOrderByCreatedAtDesc(tenantIds.get(0));
     }
 
     @Transactional
@@ -673,8 +736,12 @@ public class CivicService {
     // ==========================================
     @Transactional(readOnly = true)
     public List<PublicHearing> getPublicHearings(String tenantSlug) {
-        Tenant tenant = tenantService.getTenantEntityBySlug(tenantSlug != null ? tenantSlug : TenantContext.getTenantSlug());
-        return publicHearingRepository.findByTenantIdOrderByHearingDateDesc(tenant.getId());
+        List<Tenant> targets = resolveTargetTenants(tenantSlug);
+        List<UUID> tenantIds = targets.stream().map(Tenant::getId).toList();
+        if (targets.size() > 1) {
+            return publicHearingRepository.findByTenantIdInOrderByHearingDateDesc(tenantIds);
+        }
+        return publicHearingRepository.findByTenantIdOrderByHearingDateDesc(tenantIds.get(0));
     }
 
     @Transactional
@@ -827,8 +894,17 @@ public class CivicService {
     // CASE MANAGEMENT BASELINE
     // ==========================================
     @Transactional(readOnly = true)
-    public Page<Complaint> getComplaintsForAdmin(UUID tenantId, Pageable pageable) {
-        return complaintRepository.findByTenantIdOrderByCreatedAtDesc(tenantId, pageable);
+    public Page<Complaint> getComplaintsForAdmin(String tenantSlug, UUID tenantId, Pageable pageable) {
+        if ("all".equalsIgnoreCase(tenantSlug) || "constituency".equalsIgnoreCase(tenantSlug)) {
+            List<Tenant> list = resolveTargetTenants(tenantSlug);
+            List<UUID> tenantIds = list.stream().map(Tenant::getId).toList();
+            return complaintRepository.findByTenantIdInOrderByCreatedAtDesc(tenantIds, pageable);
+        }
+        UUID effectiveId = tenantId;
+        if (effectiveId == null) {
+            effectiveId = resolveTargetTenants(tenantSlug).get(0).getId();
+        }
+        return complaintRepository.findByTenantIdOrderByCreatedAtDesc(effectiveId, pageable);
     }
 
     @Transactional(readOnly = true)

@@ -16,10 +16,14 @@ import java.util.UUID;
 public interface ComplaintRepository extends JpaRepository<Complaint, UUID> {
     Optional<Complaint> findByTrackingIdAndTenantId(String trackingId, UUID tenantId);
     Page<Complaint> findByTenantIdOrderByCreatedAtDesc(UUID tenantId, Pageable pageable);
+    Page<Complaint> findByTenantIdInOrderByCreatedAtDesc(java.util.Collection<UUID> tenantIds, Pageable pageable);
     List<Complaint> findByTenantIdOrderByCreatedAtDesc(UUID tenantId);
+    List<Complaint> findByTenantIdInOrderByCreatedAtDesc(java.util.Collection<UUID> tenantIds);
     List<Complaint> findByTenantIdAndAssignedToOrderByCreatedAtDesc(UUID tenantId, UUID assignedTo);
     long countByTenantIdAndStatus(UUID tenantId, String status);
     long countByTenantId(UUID tenantId);
+    long countByTenantIdIn(java.util.Collection<UUID> tenantIds);
+    long countByTenantIdInAndStatus(java.util.Collection<UUID> tenantIds, String status);
 
     @Query("SELECT c.village, c.category, COUNT(c) FROM Complaint c WHERE c.tenantId = :tenantId GROUP BY c.village, c.category")
     List<Object[]> getVillageCategoryMatrix(@Param("tenantId") UUID tenantId);
